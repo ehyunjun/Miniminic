@@ -2,9 +2,11 @@
   "use strict";
 
   const STORAGE_KEY = "miniminic-save-v1";
-  const MAX_CHARGES = 60;
-  const CHARGE_INTERVAL_MS = 10000;
+  const MAX_KEYS = 60;
+  const KEY_INTERVAL_MS = 10000;
   const SLOT_COUNT = 10;
+  const ROLL_CARD_COUNT = 28;
+  const FINAL_CARD_INDEX = 22;
 
   const items = window.MINIMINIC_ITEMS || [];
   const rarities = window.MINIMINIC_RARITIES || [];
@@ -38,21 +40,10 @@
     ]
   };
 
-  const state = {
-    charges: MAX_CHARGES,
-    rechargeStartAt: Date.now(),
-    inventory: {},
-    collection: [],
-    recentItemId: "",
-    stats: {
-      totalClicks: 0,
-      totalCrafts: 0,
-      bestRarity: ""
-    }
-  };
-
+  const state = createDefaultState();
   const selection = [];
   let activeTab = "inventory";
+  let isRolling = false;
   let messageTimer = 0;
 
   const els = {};
@@ -62,7 +53,7 @@
   function init() {
     bindElements();
     loadGame();
-    normalizeRecharge();
+    normalizeKeys();
     bindEvents();
     renderAll();
     setInterval(tick, 250);
@@ -72,6 +63,8 @@
     els.chargeText = document.getElementById("chargeText");
     els.rechargeText = document.getElementById("rechargeText");
     els.chestButton = document.getElementById("chestButton");
+    els.rollMachine = document.getElementById("rollMachine");
+    els.rollTrack = document.getElementById("rollTrack");
     els.recentItem = document.getElementById("recentItem");
     els.message = document.getElementById("message");
     els.tabButtons = Array.from(document.querySelectorAll(".tab-button"));
@@ -122,11 +115,12 @@
 
   function createDefaultState() {
     return {
-      charges: MAX_CHARGES,
+      keys: MAX_KEYS,
       rechargeStartAt: Date.now(),
       inventory: {},
       collection: [],
       recentItemId: "",
+      pendingRollItemId: "",
       stats: {
         totalClicks: 0,
         totalCrafts: 0,
@@ -144,13 +138,15 @@
     try {
       const parsed = JSON.parse(saved);
       const fallback = createDefaultState();
-      state.charges = clampNumber(parsed.charges, 0, MAX_CHARGES, fallback.charges);
+      const savedKeys = parsed.keys === undefined ? parsed.charges : parsed.keys;
+      state.keys = clampNumber(savedKeys, 0, MAX_KEYS, fallback.keys);
       state.rechargeStartAt = Number.isFinite(parsed.rechargeStartAt)
         ? parsed.rechargeStartAt
         : fallback.rechargeStartAt;
       state.inventory = sanitizeInventory(parsed.inventory);
       state.collection = sanitizeCollection(parsed.collection);
       state.recentItemId = itemMap.has(parsed.recentItemId) ? parsed.recentItemId : "";
+      state.pendingRollItemId = itemMap.has(parsed.pendingRollItemId) ? parsed.pendingRollItemId : "";
       state.stats = {
         totalClicks: Math.max(0, Number(parsed.stats && parsed.stats.totalClicks) || 0),
         totalCrafts: Math.max(0, Number(parsed.stats && parsed.stats.totalCrafts) || 0),
@@ -158,8 +154,25 @@
           ? parsed.stats.bestRarity
           : ""
       };
+
+      resolvePendingRollOnLoad();
     } catch (error) {
       showMessage("저장 데이터를 불러오지 못했습니다. 새 게임으로 시작합니다.");
+    }
+  }
+
+  function resolvePendingRollOnLoad() {
+    if (!state.pendingRollItemId) {
+      return;
+    }
+
+    const pendingItem = itemMap.get(state.pendingRollItemId);
+    state.pendingRollItemId = "";
+
+    if (pendingItem) {
+      gainItem(pendingItem);
+      state.recentItemId = pendingItem.id;
+      saveGame();
     }
   }
 
@@ -175,8 +188,10 @@
 
     Object.assign(state, createDefaultState());
     selection.length = 0;
+    isRolling = false;
     localStorage.removeItem(STORAGE_KEY);
     saveGame();
+    renderRollPlaceholder();
     showMessage("게임 데이터가 초기화되었습니다.");
     renderAll();
   }
@@ -208,62 +223,159 @@
   }
 
   function tick() {
-    normalizeRecharge();
+    normalizeKeys();
     renderTopbar();
   }
 
-  // 방치 중 지난 시간을 계산해 클릭 가능 횟수를 충전한다.
-  function normalizeRecharge() {
+  // 방치 중 지난 시간을 계산해 열쇠를 충전한다.
+  function normalizeKeys() {
     const now = Date.now();
 
-    if (state.charges >= MAX_CHARGES) {
-      state.charges = MAX_CHARGES;
+    if (state.keys >= MAX_KEYS) {
+      state.keys = MAX_KEYS;
       state.rechargeStartAt = now;
       return;
     }
 
     const elapsed = now - state.rechargeStartAt;
-    if (elapsed < CHARGE_INTERVAL_MS) {
+    if (elapsed < KEY_INTERVAL_MS) {
       return;
     }
 
-    const gained = Math.floor(elapsed / CHARGE_INTERVAL_MS);
-    state.charges = Math.min(MAX_CHARGES, state.charges + gained);
+    const gained = Math.floor(elapsed / KEY_INTERVAL_MS);
+    state.keys = Math.min(MAX_KEYS, state.keys + gained);
 
-    if (state.charges >= MAX_CHARGES) {
+    if (state.keys >= MAX_KEYS) {
       state.rechargeStartAt = now;
     } else {
-      state.rechargeStartAt += gained * CHARGE_INTERVAL_MS;
+      state.rechargeStartAt += gained * KEY_INTERVAL_MS;
     }
 
     saveGame();
   }
 
   function openChest() {
-    normalizeRecharge();
+    normalizeKeys();
 
-    if (state.charges < 1) {
-      showMessage("클릭 가능 횟수가 부족합니다. 잠시 후 다시 열어보세요.");
+    if (isRolling) {
+      showMessage("보물상자가 열리는 중입니다.");
+      return;
+    }
+
+    if (state.keys < 1) {
+      showMessage("열쇠가 부족합니다. 잠시 후 다시 열어보세요.");
       renderTopbar();
       return;
     }
 
-    if (state.charges === MAX_CHARGES) {
+    if (state.keys === MAX_KEYS) {
       state.rechargeStartAt = Date.now();
     }
 
-    state.charges -= 1;
+    const resultItem = rollDropItem();
+    state.keys -= 1;
     state.stats.totalClicks += 1;
+    state.pendingRollItemId = resultItem.id;
+    saveGame();
 
-    const item = rollDropItem();
+    startRoll(resultItem);
+  }
+
+  function startRoll(resultItem) {
+    isRolling = true;
+    renderTopbar();
+    animateChest();
+    renderRollTrack(createRollSequence(resultItem), FINAL_CARD_INDEX);
+    showMessage("보물상자가 열리고 있습니다.");
+    playRollAnimation(resultItem, FINAL_CARD_INDEX);
+  }
+
+  function createRollSequence(resultItem) {
+    const sequence = [];
+
+    for (let index = 0; index < ROLL_CARD_COUNT; index += 1) {
+      sequence.push(index === FINAL_CARD_INDEX ? resultItem : rollVisualItem());
+    }
+
+    return sequence;
+  }
+
+  function rollVisualItem() {
+    return items[Math.floor(Math.random() * items.length)];
+  }
+
+  function renderRollTrack(sequence, finalIndex) {
+    els.rollTrack.innerHTML = "";
+    els.rollTrack.style.transform = "translateX(0)";
+
+    sequence.forEach((item, index) => {
+      const card = document.createElement("div");
+      card.className = `roll-card rarity-border-${item.rarity}${index === finalIndex ? " final-card" : ""}`;
+      card.innerHTML = `
+        <span class="roll-rarity rarity-${item.rarity}">${getRarityLabel(item.rarity)}</span>
+        <strong>${item.name}</strong>
+      `;
+      els.rollTrack.appendChild(card);
+    });
+  }
+
+  function playRollAnimation(resultItem, finalIndex) {
+    window.requestAnimationFrame(() => {
+      const targetX = getRollTargetX(finalIndex);
+
+      if (window.gsap) {
+        window.gsap.set(els.rollTrack, { x: 0 });
+        window.gsap.to(els.rollTrack, {
+          x: targetX,
+          duration: 2.4,
+          ease: "power4.out",
+          onComplete: () => finalizeRoll(resultItem)
+        });
+        return;
+      }
+
+      els.rollTrack.style.transform = `translateX(${targetX}px)`;
+      window.setTimeout(() => finalizeRoll(resultItem), 180);
+    });
+  }
+
+  function getRollTargetX(finalIndex) {
+    const finalCard = els.rollTrack.children[finalIndex];
+    if (!finalCard) {
+      return 0;
+    }
+
+    const machineCenter = els.rollMachine.clientWidth / 2;
+    const cardCenter = finalCard.offsetLeft + finalCard.offsetWidth / 2;
+    return machineCenter - cardCenter;
+  }
+
+  function finalizeRoll(fallbackItem) {
+    if (!state.pendingRollItemId) {
+      isRolling = false;
+      renderAll();
+      return;
+    }
+
+    const item = itemMap.get(state.pendingRollItemId) || fallbackItem;
     gainItem(item);
     state.recentItemId = item.id;
+    state.pendingRollItemId = "";
+    isRolling = false;
 
     saveGame();
-    animateChest();
     renderAll();
     animateRecentItem();
-    showMessage(`${getRarityLabel(item.rarity)} 아이템을 획득했습니다.`);
+    showMessage(`획득 완료! ${getRarityLabel(item.rarity)} ${item.name}`);
+  }
+
+  function renderRollPlaceholder() {
+    if (!els.rollTrack) {
+      return;
+    }
+
+    els.rollTrack.innerHTML = `<div class="roll-placeholder">보물상자를 열면 아이템 카드가 지나갑니다.</div>`;
+    els.rollTrack.style.transform = "translateX(0)";
   }
 
   function rollDropItem() {
@@ -431,15 +543,17 @@
   }
 
   function renderTopbar() {
-    els.chargeText.textContent = `${state.charges} / ${MAX_CHARGES}`;
+    els.chargeText.textContent = `${state.keys} / ${MAX_KEYS}`;
+    els.chestButton.disabled = isRolling || state.keys < 1;
+    els.chestButton.classList.toggle("rolling", isRolling);
 
-    if (state.charges >= MAX_CHARGES) {
+    if (state.keys >= MAX_KEYS) {
       els.rechargeText.textContent = "최대";
       return;
     }
 
     const elapsed = Date.now() - state.rechargeStartAt;
-    const remaining = Math.max(0, CHARGE_INTERVAL_MS - (elapsed % CHARGE_INTERVAL_MS));
+    const remaining = Math.max(0, KEY_INTERVAL_MS - (elapsed % KEY_INTERVAL_MS));
     els.rechargeText.textContent = formatTime(remaining);
   }
 
@@ -597,7 +711,7 @@
     const best = state.stats.bestRarity ? getRarityLabel(state.stats.bestRarity) : "없음";
 
     const stats = [
-      { label: "총 클릭 수", value: state.stats.totalClicks.toLocaleString("ko-KR") },
+      { label: "총 오픈 수", value: state.stats.totalClicks.toLocaleString("ko-KR") },
       { label: "총 합성 수", value: state.stats.totalCrafts.toLocaleString("ko-KR") },
       { label: "최고 획득 레어도", value: best },
       { label: "도감 달성률", value: `${foundCount} / ${items.length} (${rate}%)` }
