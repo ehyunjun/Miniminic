@@ -15,11 +15,11 @@
       </div>
       <div class="status">
         <div class="status-item">
-          <span>클릭 가능</span>
+          <span>열쇠</span>
           <strong id="chargeText">0 / 60</strong>
         </div>
         <div class="status-item">
-          <span>다음 충전</span>
+          <span>다음 열쇠</span>
           <strong id="rechargeText">--:--</strong>
         </div>
         <button class="reset-button" id="resetButton" type="button">초기화</button>
@@ -38,7 +38,13 @@
             <span class="chest-lock"></span>
           </span>
         </button>
-        <p class="hint">보물상자를 클릭하거나 Space 키를 눌러 여세요.</p>
+        <p class="hint">열쇠로 보물상자를 열고, 중앙 표시선에 멈추는 보물을 확인하세요.</p>
+        <div class="roll-machine" id="rollMachine" aria-label="보물상자 오픈 롤">
+          <div class="roll-marker" aria-hidden="true"></div>
+          <div class="roll-track" id="rollTrack">
+            <div class="roll-placeholder">보물상자를 열면 아이템 카드가 지나갑니다.</div>
+          </div>
+        </div>
         <div class="recent" id="recentItem">
           <span class="recent-label">최근 획득</span>
           <strong>아직 획득한 아이템이 없습니다.</strong>

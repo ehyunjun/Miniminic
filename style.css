@@ -141,6 +141,11 @@ h1 {
   cursor: pointer;
 }
 
+.chest-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .chest-button:focus-visible {
   outline: 3px solid rgba(242, 184, 75, 0.75);
   outline-offset: 8px;
@@ -230,6 +235,97 @@ h1 {
   margin-bottom: 0;
   color: var(--muted);
   text-align: center;
+}
+
+.roll-machine {
+  width: min(760px, 100%);
+  min-height: 116px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.roll-machine::before,
+.roll-machine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  width: 76px;
+  height: 100%;
+  pointer-events: none;
+}
+
+.roll-machine::before {
+  left: 0;
+  background: linear-gradient(90deg, rgba(16, 24, 32, 0.96), rgba(16, 24, 32, 0));
+}
+
+.roll-machine::after {
+  right: 0;
+  background: linear-gradient(270deg, rgba(16, 24, 32, 0.96), rgba(16, 24, 32, 0));
+}
+
+.roll-marker {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  bottom: 8px;
+  z-index: 3;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--gold);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.24), 0 0 18px rgba(242, 184, 75, 0.55);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.roll-track {
+  min-height: 116px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  padding: 14px calc(50% - 62px);
+  will-change: transform;
+}
+
+.roll-placeholder {
+  width: min(360px, calc(100vw - 56px));
+  color: var(--muted);
+  text-align: center;
+}
+
+.roll-card {
+  width: 124px;
+  min-height: 84px;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  flex: 0 0 124px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.roll-card.final-card {
+  background: rgba(242, 184, 75, 0.14);
+}
+
+.roll-rarity {
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.roll-card strong {
+  font-size: 0.86rem;
+  line-height: 1.25;
 }
 
 .recent {
@@ -577,6 +673,20 @@ h1 {
 
   .hero {
     padding-top: 28px;
+  }
+
+  .roll-machine::before,
+  .roll-machine::after {
+    width: 38px;
+  }
+
+  .roll-card {
+    width: 112px;
+    flex-basis: 112px;
+  }
+
+  .roll-track {
+    padding-inline: calc(50% - 56px);
   }
 
   .tabs {
