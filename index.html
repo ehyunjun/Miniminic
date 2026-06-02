@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Miniminic</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Treasure Idle Clicker</p>
+        <h1>Miniminic</h1>
+      </div>
+      <div class="status">
+        <div class="status-item">
+          <span>클릭 가능</span>
+          <strong id="chargeText">0 / 60</strong>
+        </div>
+        <div class="status-item">
+          <span>다음 충전</span>
+          <strong id="rechargeText">--:--</strong>
+        </div>
+        <button class="reset-button" id="resetButton" type="button">초기화</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-label="보물상자">
+        <button class="chest-button" id="chestButton" type="button" aria-label="보물상자 열기">
+          <span class="chest-shadow"></span>
+          <span class="treasure-chest" aria-hidden="true">
+            <span class="chest-lid"></span>
+            <span class="chest-body"></span>
+            <span class="chest-band chest-band-left"></span>
+            <span class="chest-band chest-band-right"></span>
+            <span class="chest-lock"></span>
+          </span>
+        </button>
+        <p class="hint">보물상자를 클릭하거나 Space 키를 눌러 여세요.</p>
+        <div class="recent" id="recentItem">
+          <span class="recent-label">최근 획득</span>
+          <strong>아직 획득한 아이템이 없습니다.</strong>
+        </div>
+        <p class="message" id="message" role="status" aria-live="polite"></p>
+      </section>
+
+      <nav class="tabs" aria-label="게임 메뉴">
+        <button class="tab-button active" type="button" data-tab="inventory">인벤토리/합성</button>
+        <button class="tab-button" type="button" data-tab="collection">도감</button>
+        <button class="tab-button" type="button" data-tab="stats">통계</button>
+      </nav>
+
+      <section class="panel active" id="inventoryPanel" data-panel="inventory">
+        <div class="craft-zone">
+          <div class="panel-heading">
+            <h2>합성 슬롯</h2>
+            <p id="craftRule">같은 레어도 아이템 10개를 넣으면 합성할 수 있습니다.</p>
+          </div>
+          <div class="craft-slots" id="craftSlots" aria-label="합성 슬롯"></div>
+          <div class="action-row">
+            <button class="primary-button" id="craftButton" type="button">합성하기</button>
+            <button class="ghost-button" id="clearSlotsButton" type="button">선택 초기화</button>
+          </div>
+        </div>
+        <div class="inventory-list" id="inventoryList"></div>
+      </section>
+
+      <section class="panel" id="collectionPanel" data-panel="collection">
+        <div class="panel-heading">
+          <h2>도감</h2>
+          <p>한 번이라도 얻은 아이템만 이름이 표시됩니다.</p>
+        </div>
+        <div class="collection-list" id="collectionList"></div>
+      </section>
+
+      <section class="panel" id="statsPanel" data-panel="stats">
+        <div class="panel-heading">
+          <h2>통계</h2>
+          <p>지금까지의 탐험 기록입니다.</p>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+  <script src="data/items.js" defer></script>
+  <script src="main.js" defer></script>
+</body>
+</html>
