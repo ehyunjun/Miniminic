@@ -310,7 +310,10 @@
 
     sequence.forEach((item, index) => {
       const card = document.createElement("div");
-      card.className = `roll-card rarity-border-${item.rarity}${index === finalIndex ? " final-card" : ""}`;
+      card.className = `roll-card rarity-border-${item.rarity}`;
+      if (index === finalIndex) {
+        card.dataset.result = "true";
+      }
       card.innerHTML = `
         <span class="roll-rarity rarity-${item.rarity}">${getRarityLabel(item.rarity)}</span>
         <strong>${item.name}</strong>
@@ -346,8 +349,12 @@
     }
 
     const machineCenter = els.rollMachine.clientWidth / 2;
-    const cardCenter = finalCard.offsetLeft + finalCard.offsetWidth / 2;
-    return machineCenter - cardCenter;
+    const minPercent = 0.03;
+    const maxPercent = 0.97;
+    const hitPercent = minPercent + Math.random() * (maxPercent - minPercent);
+    const cardHitX = finalCard.offsetLeft + finalCard.offsetWidth * hitPercent;
+
+    return machineCenter - cardHitX;
   }
 
   function finalizeRoll(fallbackItem) {
@@ -365,8 +372,16 @@
 
     saveGame();
     renderAll();
+    revealRollWinner();
     animateRecentItem();
     showMessage(`획득 완료! ${getRarityLabel(item.rarity)} ${item.name}`);
+  }
+
+  function revealRollWinner() {
+    const winnerCard = els.rollTrack.querySelector('[data-result="true"]');
+    if (winnerCard) {
+      winnerCard.classList.add("winner-card");
+    }
   }
 
   function renderRollPlaceholder() {

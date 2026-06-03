@@ -312,10 +312,16 @@ h1 {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
   text-align: center;
   overflow-wrap: anywhere;
+  transition: background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-.roll-card.final-card {
-  background: rgba(242, 184, 75, 0.14);
+.roll-card.winner-card {
+  background: rgba(242, 184, 75, 0.18);
+  box-shadow:
+    0 0 0 1px rgba(242, 184, 75, 0.42),
+    0 0 26px rgba(242, 184, 75, 0.38),
+    0 14px 32px rgba(0, 0, 0, 0.28);
+  transform: scale(1.035);
 }
 
 .roll-rarity {
